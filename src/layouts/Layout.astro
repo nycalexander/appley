@@ -45,6 +45,7 @@ const base = Astro.url.pathname.endsWith('/')
     <Icons />
     <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet" />
     <script src="/scripts/apple-emoji.js" defer></script>
+    <script src="/scripts/print-fillers.js" defer></script>
     <link rel="manifest" href="/site.webmanifest" />
 
     <script is:inline>
@@ -59,6 +60,19 @@ const base = Astro.url.pathname.endsWith('/')
       }
       loadMode('theme')
       loadMode('font')
+      // Persisted toggle for showing markdown formatting markers in the editor
+      function applyShowMarkdownFormatting() {
+        try {
+          const v = localStorage.getItem('showMarkdownFormatting')
+          if (v === '1') {
+            const editor = document.getElementById('editor') || document.querySelector('.editor') || document.documentElement
+            editor.classList.add('show-markdown-formatting')
+          }
+        } catch (e) {
+          console.warn('applyShowMarkdownFormatting failed', e)
+        }
+      }
+      applyShowMarkdownFormatting()
     </script>
 
     <title>{pageTitle}</title>

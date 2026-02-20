@@ -164,6 +164,24 @@ const allActionsData: Partial<Action>[] = [
 
 	},
 	{
+		id: 'toggleMdFormatting',
+		name: 'Toggle Markdown formatting',
+		icon: 'MaterialSymbolsLightMarkdownOutlineRounded',
+		aliases: 'markdown|toggle markdown|показать markdown',
+		closesMenu: true,
+		callback: () => {
+			try {
+				const editor = document.getElementById('editor') || document.querySelector('.editor') || document.documentElement
+				const cls = 'show-markdown-formatting'
+				const enabled = editor.classList.toggle(cls)
+				localStorage.setItem('showMarkdownFormatting', enabled ? '1' : '0')
+			} catch (e) {
+				console.error('toggleMdFormatting failed', e)
+			}
+		}
+
+	},
+	{
 		id: 'shortcuts',
 		name: 'Show all shortcuts',
 		icon: 'MaterialSymbolsLightKeyboardAltOutlineRounded',
