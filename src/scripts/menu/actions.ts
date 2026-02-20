@@ -39,6 +39,15 @@ const allActionsData: Partial<Action>[] = [
 		callback: exportFile
 	},
 	{
+		id: 'print',
+		name: 'Print',
+		icon: 'MaterialSymbolsLightPrintOutlineRounded',
+		shortcut: [ctrl, 'P'],
+		aliases: 'print|печать',
+		closesMenu: true,
+		callback: () => setTimeout(() => window.print(), 150)
+	},
+	{
 		id: 'open',
 		name: 'Upload file(s)',
 		icon: 'MaterialSymbolsLightUploadFileOutlineRounded',
@@ -61,6 +70,13 @@ const allActionsData: Partial<Action>[] = [
 		icon: 'MaterialSymbolsLightInsertTextOutlineRounded',
 		aliases: 'style|ащте|шрифт',
 		callback: cycleFonts
+	},
+	{
+		id: 'textFormat',
+		name: 'Text formatting',
+		icon: 'MaterialSymbolsLightInsertTextOutlineRounded',
+		aliases: 'format|line height|spacing',
+		callback: () => state.menu.openView('formatting')
 	},
 	{
 		id: 'fontSans',
@@ -161,15 +177,6 @@ const allActionsData: Partial<Action>[] = [
 		aliases: 'qurle|help|фищге|meow|hi',
 		closesMenu: true,
 		callback: () => window.open('/hello', '_blank')
-	},
-	{
-		id: 'print',
-		name: 'Print',
-		icon: 'MaterialSymbolsLightPrintOutlineRounded',
-		shortcut: [ctrl, 'P'],
-		aliases: 'print|печать',
-		closesMenu: true,
-		callback: () => setTimeout(() => window.print(), 150)
 	},
 ] as const
 

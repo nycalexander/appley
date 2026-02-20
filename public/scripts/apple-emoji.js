@@ -3,7 +3,8 @@
 (function () {
   'use strict'
 
-  const EMOJI_CDN_BASE = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@latest/img/apple/64'
+  // Use larger source images (128px) so browsers can downscale with smoother anti-aliasing
+  const EMOJI_CDN_BASE = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@latest/img/apple/128'
 
   // Test for emoji characters (uses Unicode property escape)
   const emojiTest = (() => {
@@ -53,6 +54,7 @@
         const filename = toFilename(seg)
         const img = document.createElement('img')
         img.className = 'apple-emoji'
+        img.decoding = 'async'
         img.src = `${EMOJI_CDN_BASE}/${filename}.png`
         img.alt = seg
         img.draggable = false

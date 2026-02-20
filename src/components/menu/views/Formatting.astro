@@ -1,0 +1,124 @@
+---
+import MenuView from '@layouts/MenuView.astro'
+---
+
+<MenuView id="formatting" title="Text formatting">
+	<div class="controls">
+		<label for="line-height">Line height: <output id="lh-output"></output></label>
+		<input id="line-height" type="range" min="1" max="2" step="0.01" />
+	</div>
+
+	<div class="controls">
+		<label for="letter-spacing">Letter spacing: <output id="ls-output"></output></label>
+		<input id="letter-spacing" type="range" min="-0.05" max="0.3" step="0.01" />
+	</div>
+
+	<div class="controls">
+		<button id="reset-format" class="primary button">Reset to defaults</button>
+	</div>
+</MenuView>
+
+<style lang="scss">
+	.controls {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-m);
+		padding-right: var(--space-xl);
+		padding-bottom: var(--space-l);
+	}
+
+	label {
+		font-size: var(--font-size-s);
+		color: var(--color-main-50);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	input[type="range"] {
+		width: 100%;
+	}
+
+	#reset-format {
+		margin-top: var(--space-m);
+	}
+</style>
+
+<script is:inline>
+	(function () {
+		const root = document.documentElement
+
+		function readVar(name, fallback) {
+			const v = getComputedStyle(root).getPropertyValue(name)
+			return v ? parseFloat(v) : fallback
+		}
+
+		function formatNumber(n) {
+			return Number(n).toFixed(2)
+		}
+
+		function init() {
+			const lhInput = document.getElementById('line-height')
+			const lsInput = document.getElementById('letter-spacing')
+			const lhOut = document.getElementById('lh-output')
+			const lsOut = document.getElementById('ls-output')
+			const resetBtn = document.getElementById('reset-format')
+
+			const storedLH = localStorage.getItem('line-height')
+			const storedLS = localStorage.getItem('letter-spacing')
+			const initialLH = storedLH ? parseFloat(storedLH) : readVar('--line-height', 1.4)
+			const initialLS = storedLS ? parseFloat(storedLS) : readVar('--letter-spacing', 0)
+
+			if (lhInput) lhInput.value = String(initialLH)
+			if (lsInput) lsInput.value = String(initialLS)
+			if (lhOut) lhOut.textContent = formatNumber(initialLH)
+			if (lsOut) lsOut.textContent = formatNumber(initialLS)
+
+			root.style.setProperty('--line-height', String(initialLH))
+			root.style.setProperty('--letter-spacing', String(initialLS) + 'px')
+
+			if (lhInput) {
+				lhInput.addEventListener('input', (e) => {
+					const target = e.target
+					if (!(target instanceof HTMLInputElement)) return
+					const v = target.value
+					root.style.setProperty('--line-height', v)
+					if (lhOut) lhOut.textContent = formatNumber(v)
+					localStorage.setItem('line-height', v)
+				})
+			}
+
+			if (lsInput) {
+				lsInput.addEventListener('input', (e) => {
+					const target = e.target
+					if (!(target instanceof HTMLInputElement)) return
+					const v = target.value
+					root.style.setProperty('--letter-spacing', v + 'px')
+					if (lsOut) lsOut.textContent = formatNumber(v)
+					localStorage.setItem('letter-spacing', v)
+				})
+			}
+
+			if (resetBtn) {
+				resetBtn.addEventListener('click', () => {
+					const defLH = 1.4
+					const defLS = 0
+					root.style.setProperty('--line-height', String(defLH))
+					root.style.setProperty('--letter-spacing', String(defLS) + 'px')
+					if (lhInput) lhInput.value = String(defLH)
+					if (lsInput) lsInput.value = String(defLS)
+					if (lhOut) lhOut.textContent = formatNumber(defLH)
+					if (lsOut) lsOut.textContent = formatNumber(defLS)
+					localStorage.removeItem('line-height')
+					localStorage.removeItem('letter-spacing')
+				})
+			}
+		}
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', init)
+		} else {
+			init()
+		}
+	})()
+</script>
