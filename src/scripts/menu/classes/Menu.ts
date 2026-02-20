@@ -206,13 +206,15 @@ export class Menu {
 	}
 
 	openView(id: string) {
-		for (const view of this.views) {
-			;(view as HTMLElement).hidden = true
-		}
-		const currentView = getById("view-" + id)
+		const currentView = getById('view-' + id)
 		if (!currentView) {
 			console.warn(`Requested view view-${id} not found`)
+			// Ensure actions view remains visible when requested view missing
+			if (this.actionsView) this.actionsView.hidden = false
 			return
+		}
+		for (const view of this.views) {
+			;(view as HTMLElement).hidden = true
 		}
 		currentView.hidden = false
 

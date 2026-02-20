@@ -55,9 +55,160 @@
         const img = document.createElement('img')
         img.className = 'apple-emoji'
         img.decoding = 'async'
+        img.crossOrigin = 'anonymous'
         img.src = `${EMOJI_CDN_BASE}/${filename}.png`
         img.alt = seg
         img.draggable = false
+
+        // After load, attempt high-quality downscale. Use createImageBitmap when available,
+        // fallback to a Lanczos resample implemented in JS.
+        img.addEventListener('load', () => {
+          try {
+            const parent = img.parentElement || document.documentElement
+            const fontSize = parseFloat(getComputedStyle(parent).fontSize) || 16
+            const targetPx = Math.max(12, Math.round(fontSize * (window.devicePixelRatio || 1)))
+
+            // Prefer createImageBitmap with resizeQuality when available
+            if (typeof createImageBitmap === 'function') {
+              try {
+                createImageBitmap(img, { resizeWidth: targetPx, resizeHeight: targetPx, resizeQuality: 'high' })
+                  .then((bitmap) => {
+                    const canvas = document.createElement('canvas')
+                    canvas.width = targetPx
+                    canvas.height = targetPx
+                    const ctx = canvas.getContext('2d')
+                    ctx.imageSmoothingEnabled = true
+                    ctx.imageSmoothingQuality = 'high'
+                    ctx.drawImage(bitmap, 0, 0, targetPx, targetPx)
+                    canvas.className = 'apple-emoji'
+                    canvas.setAttribute('role', 'img')
+                    canvas.setAttribute('aria-label', img.alt || '')
+                    canvas.draggable = false
+                    img.replaceWith(canvas)
+                  })
+                return
+              } catch (err) {
+                // fall through to Lanczos fallback
+              }
+            }
+
+            // Lanczos fallback: separable resampling (a = 3)
+            function lanczos(x, a) {
+              if (x === 0) return 1
+              if (x <= -a || x >= a) return 0
+              const piX = Math.PI * x
+              const sinc = Math.sin(piX) / piX
+              const sincA = Math.sin(piX / a) / (piX / a)
+              return sinc * sincA
+            }
+
+            function lanczosResize(imgEl, dst) {
+              const sw = imgEl.naturalWidth
+              const sh = imgEl.naturalHeight
+              const dw = dst
+              const dh = dst
+
+              const srcCanvas = document.createElement('canvas')
+              srcCanvas.width = sw
+              srcCanvas.height = sh
+              const sctx = srcCanvas.getContext('2d')
+              sctx.drawImage(imgEl, 0, 0)
+              const srcData = sctx.getImageData(0, 0, sw, sh).data
+
+              const a = 3
+              const tmp = new Float32Array(dw * sh * 4)
+
+              // Horizontal pass
+              for (let y = 0; y < sh; y++) {
+                for (let x = 0; x < dw; x++) {
+                  const cx = (x + 0.5) * sw / dw - 0.5
+                  const left = Math.floor(cx - a + 1)
+                  const right = Math.ceil(cx + a - 1)
+                  let wsum = 0
+                  let r = 0, g = 0, b = 0, aa = 0
+                  for (let sx = left; sx <= right; sx++) {
+                    const scx = Math.min(sw - 1, Math.max(0, sx))
+                    const w = lanczos(cx - sx, a)
+                    if (w === 0) continue
+                    wsum += w
+                    const si = (y * sw + scx) * 4
+                    r += srcData[si] * w
+                    g += srcData[si + 1] * w
+                    b += srcData[si + 2] * w
+                    aa += srcData[si + 3] * w
+                  }
+                  const di = (y * dw + x) * 4
+                  if (wsum !== 0) {
+                    tmp[di] = r / wsum
+                    tmp[di + 1] = g / wsum
+                    tmp[di + 2] = b / wsum
+                    tmp[di + 3] = aa / wsum
+                  } else {
+                    tmp[di] = tmp[di + 1] = tmp[di + 2] = 0
+                    tmp[di + 3] = 255
+                  }
+                }
+              }
+
+              // Vertical pass
+              const dstBuf = new Uint8ClampedArray(dw * dh * 4)
+              for (let x = 0; x < dw; x++) {
+                for (let y = 0; y < dh; y++) {
+                  const cy = (y + 0.5) * sh / dh - 0.5
+                  const top = Math.floor(cy - a + 1)
+                  const bottom = Math.ceil(cy + a - 1)
+                  let wsum = 0
+                  let r = 0, g = 0, b = 0, aa = 0
+                  for (let sy = top; sy <= bottom; sy++) {
+                    const scy = Math.min(sh - 1, Math.max(0, sy))
+                    const w = lanczos(cy - sy, a)
+                    if (w === 0) continue
+                    wsum += w
+                    const ti = (scy * dw + x) * 4
+                    r += tmp[ti] * w
+                    g += tmp[ti + 1] * w
+                    b += tmp[ti + 2] * w
+                    aa += tmp[ti + 3] * w
+                  }
+                  const di = (y * dw + x) * 4
+                  if (wsum !== 0) {
+                    dstBuf[di] = Math.round(r / wsum)
+                    dstBuf[di + 1] = Math.round(g / wsum)
+                    dstBuf[di + 2] = Math.round(b / wsum)
+                    dstBuf[di + 3] = Math.round(aa / wsum)
+                  } else {
+                    dstBuf[di] = dstBuf[di + 1] = dstBuf[di + 2] = 0
+                    dstBuf[di + 3] = 255
+                  }
+                }
+              }
+
+              const canvas = document.createElement('canvas')
+              canvas.width = dw
+              canvas.height = dh
+              const ctx = canvas.getContext('2d')
+              const imageData = ctx.createImageData(dw, dh)
+              imageData.data.set(dstBuf)
+              ctx.putImageData(imageData, 0, 0)
+              return canvas
+            }
+
+            try {
+              const c = lanczosResize(img, targetPx)
+              c.className = 'apple-emoji'
+              c.setAttribute('role', 'img')
+              c.setAttribute('aria-label', img.alt || '')
+              c.draggable = false
+              img.replaceWith(c)
+            } catch (err) {
+              // If anything goes wrong, leave the original image as-is
+              console.warn('Emoji downscale failed, leaving original image', err)
+            }
+          } catch (e) {
+            // Ignore downscale errors
+          }
+        })
+
         frag.appendChild(img)
       } else {
         frag.appendChild(document.createTextNode(seg))

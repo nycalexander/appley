@@ -3,6 +3,7 @@ import '@styles/action-menu.sass'
 import Actions from '@components/menu/Actions.astro'
 import Shortcuts from '@components/menu/views/Shortcuts.astro'
 import MdHandbook from '@components/menu/views/MdHandbook.astro'
+import Formatting from '@components/menu/views/Formatting.astro'
 ---
 
 <div id="action-menu">
@@ -29,6 +30,7 @@ import MdHandbook from '@components/menu/views/MdHandbook.astro'
   </button>
   <div class="action-popup bg-blur" role="dialog" tabindex="-1">
     <Actions />
+    <Formatting />
     <Shortcuts />
     <MdHandbook />
   </div>
