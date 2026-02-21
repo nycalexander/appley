@@ -73,4 +73,86 @@ const { editorVersion } = Astro.props
 	initFocusListener()
 	initUnloadListener()
 	initDragAndDrop()
+
+	// Markdown view toggle: show raw markdown in an overlay when
+	// the `show-markdown-formatting` class is present on the editor.
+	import { getMD } from '@scripts/versions/getMD'
+	import { insertMD } from '@scripts/versions/insertMD'
+
+	function initMarkdownToggle() {
+		let overlay: HTMLElement | null = null
+		let lastMD = ''
+
+		function createOverlay(md: string) {
+			if (overlay) return overlay
+			overlay = document.createElement('div')
+			overlay.className = 'markdown-overlay'
+			overlay.innerHTML = `
+				<div class="markdown-toolbar">
+					<button class="md-apply">Apply</button>
+					<button class="md-close">Close</button>
+				</div>
+				<textarea class="md-textarea" aria-label="Markdown view"></textarea>
+			`
+
+			const ta = overlay.querySelector('.md-textarea') as HTMLTextAreaElement
+			const btnApply = overlay.querySelector('.md-apply') as HTMLButtonElement
+			const btnClose = overlay.querySelector('.md-close') as HTMLButtonElement
+
+			btnApply.addEventListener('click', async () => {
+				const content = ta.value
+				if (content !== lastMD) {
+					await insertMD(content)
+					lastMD = content
+				}
+				hideOverlay()
+			})
+
+			btnClose.addEventListener('click', () => {
+				hideOverlay()
+			})
+
+			return overlay
+		}
+
+		function showOverlay() {
+			try {
+				lastMD = getMD()
+				const el = state.editorEl || document.getElementById('editor') || document.querySelector('.editor') || document.documentElement
+				const ov = createOverlay(lastMD)
+				;(ov.querySelector('.md-textarea') as HTMLTextAreaElement).value = lastMD
+				el.appendChild(ov)
+				;(ov.querySelector('.md-textarea') as HTMLTextAreaElement).focus()
+			} catch (e) {
+				console.warn('showOverlay failed', e)
+			}
+		}
+
+		function hideOverlay() {
+			if (!overlay) return
+			overlay.remove()
+			overlay = null
+		}
+
+		function handleClassChange() {
+			const el = state.editorEl || document.getElementById('editor') || document.querySelector('.editor') || document.documentElement
+			const enabled = el.classList.contains('show-markdown-formatting') || document.documentElement.classList.contains('show-markdown-formatting')
+			if (enabled) showOverlay()
+			else hideOverlay()
+		}
+
+		const docObserver = new MutationObserver(handleClassChange)
+		// Observe class changes on <html> and its subtree so toggles applied
+		// to `#editor` or other descendants are also caught.
+		docObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true })
+
+		if (state.editorEl) {
+			const elObserver = new MutationObserver(handleClassChange)
+			elObserver.observe(state.editorEl, { attributes: true, attributeFilter: ['class'] })
+		}
+
+		handleClassChange()
+	}
+
+	initMarkdownToggle()
 </script>
